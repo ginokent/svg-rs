@@ -1,0 +1,100 @@
+<svg viewBox="0 0 400 400" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <!-- プレビュー時の背景色用（画像単体で開いた際の視認性のため） -->
+  <rect width="100%" height="100%" fill="#F8FAFC" />
+
+  <!-- ローカル座標の中心を 200,200 に設定 -->
+  <g transform="translate(200, 200)">
+
+    <!-- カートの影 -->
+    <g>
+      <animateTransform attributeName="transform" type="scale" values="0; 1; 1; 0; 0; 1; 1" keyTimes="0; 0.15; 0.45; 0.52; 0.90; 0.95; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0.58 1; 0 0 1 1; 0.42 0 0.58 1; 0 0 1 1; 0 0 1 1; 0 0 1 1" />
+      <animate attributeName="opacity" values="0; 1; 1; 0; 0; 0; 0" keyTimes="0; 0.15; 0.45; 0.52; 0.90; 0.95; 1" dur="3s" repeatCount="indefinite" />
+      <ellipse cx="0" cy="28" rx="26" ry="3.5" fill="rgba(0,0,0,0.08)" />
+    </g>
+
+    <!-- 成功チェックマークの影 -->
+    <g>
+      <animateTransform attributeName="transform" type="scale" values="0; 0; 1.1; 1; 1; 0; 0" keyTimes="0; 0.48; 0.53; 0.57; 0.85; 0.90; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 0.58 1; 0 0 0.58 1; 0 0 1 1; 0 0 1 1; 0 0 1 1" />
+      <animate attributeName="opacity" values="0; 0; 1; 1; 1; 0; 0" keyTimes="0; 0.48; 0.53; 0.57; 0.85; 0.90; 1" dur="3s" repeatCount="indefinite" />
+      <ellipse cx="0" cy="28" rx="18" ry="3.5" fill="rgba(0,0,0,0.08)" />
+    </g>
+
+    <!-- フェーズ 1: チェックアウトアクション -->
+    <g>
+      <!-- シーン全体の伸縮と消失（スケール・透明度） -->
+      <animateTransform attributeName="transform" type="scale" values="1; 1; 1.05; 0; 0; 1; 1" keyTimes="0; 0.45; 0.48; 0.52; 0.90; 0.95; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 0.58 1; 0.42 0 1 1; 0 0 1 1; 0 0 1 1; 0 0 1 1" />
+      <animate attributeName="opacity" values="1; 1; 1; 0; 0; 0; 0" keyTimes="0; 0.45; 0.48; 0.52; 0.90; 0.95; 1" dur="3s" repeatCount="indefinite" />
+
+      <!-- 商品ボックスの落下とバウンド -->
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="0 -80; 0 -80; 0 0; 0 -12; 0 0; 0 0" keyTimes="0; 0.12; 0.22; 0.26; 0.30; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 1 1; 0 0 0.58 1; 0.42 0 1 1; 0 0 1 1" />
+        <animate attributeName="opacity" values="0; 0; 1; 1" keyTimes="0; 0.12; 0.15; 1" dur="3s" repeatCount="indefinite" />
+        <g transform="translate(-2, -6)">
+          <rect x="-8" y="-9" width="16" height="18" rx="2" fill="#F59E0B" />
+          <path d="M -8 -3 L 0 -1 L 8 -3" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="-3" y="-9" width="6" height="5" fill="#FEF3C7" />
+        </g>
+      </g>
+
+      <!-- ショッピングカート全体 -->
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="-150 0; 0 0; 0 0" keyTimes="0; 0.15; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0.58 1; 0 0 1 1" />
+        <animate attributeName="opacity" values="0; 1; 1; 1" keyTimes="0; 0.03; 0.15; 1" dur="3s" repeatCount="indefinite" />
+
+        <polygon points="-18,-15 -12,10 15,10 25,-15" fill="none" stroke="#475569" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M -18,-15 L -23,-22 L -33,-22" fill="none" stroke="#475569" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        <line x1="-15" y1="-2" x2="19" y2="-2" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+        <line x1="1.5" y1="10" x2="3.5" y2="-15" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+
+        <!-- 後輪の回転 -->
+        <g transform="translate(-8, 16)">
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="-720; 0; 0" keyTimes="0; 0.15; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0.58 1; 0 0 1 1" />
+            <circle cx="0" cy="0" r="4.5" fill="#F8FAFC" stroke="#475569" stroke-width="2.5" />
+            <line x1="0" y1="-4.5" x2="0" y2="4.5" stroke="#475569" stroke-width="2" />
+            <line x1="-4.5" y1="0" x2="4.5" y2="0" stroke="#475569" stroke-width="2" />
+          </g>
+        </g>
+
+        <!-- 前輪の回転 -->
+        <g transform="translate(11, 16)">
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="-720; 0; 0" keyTimes="0; 0.15; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 0.58 1; 0 0 1 1" />
+            <circle cx="0" cy="0" r="4.5" fill="#F8FAFC" stroke="#475569" stroke-width="2.5" />
+            <line x1="0" y1="-4.5" x2="0" y2="4.5" stroke="#475569" stroke-width="2" />
+            <line x1="-4.5" y1="0" x2="4.5" y2="0" stroke="#475569" stroke-width="2" />
+          </g>
+        </g>
+      </g>
+
+      <!-- クレジットカードのスライドイン（移動と回転を分けて合成） -->
+      <g>
+        <animateTransform attributeName="transform" type="translate" values="80 -60; 80 -60; 25 -15; 35 -22; 35 -22" keyTimes="0; 0.25; 0.34; 0.38; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 1 1; 0 0 0.58 1; 0 0 1 1" />
+        <animate attributeName="opacity" values="0; 0; 1; 1" keyTimes="0; 0.25; 0.28; 1" dur="3s" repeatCount="indefinite" />
+
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="-20; -20; 0; -8; -8" keyTimes="0; 0.25; 0.34; 0.38; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 1 1; 0 0 0.58 1; 0 0 1 1" />
+          <rect x="-15" y="-10" width="30" height="20" rx="3" fill="#6366F1" />
+          <rect x="-15" y="-4" width="30" height="4" fill="#312E81" />
+          <rect x="-10" y="3" width="5" height="4" rx="1" fill="#FBBF24" />
+          <circle cx="8" cy="5" r="2.5" fill="#F43F5E" opacity="0.9" />
+          <circle cx="11.5" cy="5" r="2.5" fill="#FBBF24" opacity="0.9" />
+        </g>
+      </g>
+
+    </g>
+
+    <!-- フェーズ 2: 成功表示（チェックマーク）のモーフ -->
+    <g>
+      <animateTransform attributeName="transform" type="scale" values="0; 0; 1.15; 1; 1; 0; 0" keyTimes="0; 0.48; 0.53; 0.57; 0.85; 0.90; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0.42 0 0.58 1; 0 0 0.58 1; 0 0 1 1; 0 0 1 1; 0 0 1 1" />
+      <animate attributeName="opacity" values="0; 0; 1; 1; 1; 0; 0" keyTimes="0; 0.48; 0.53; 0.57; 0.85; 0.90; 1" dur="3s" repeatCount="indefinite" />
+
+      <circle cx="0" cy="0" r="28" fill="#10B981" />
+      <!-- パスアニメーションでチェックを描く -->
+      <path d="M -10 2 L -3 9 L 12 -6" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50">
+        <animate attributeName="stroke-dashoffset" values="50; 50; 0; 0" keyTimes="0; 0.53; 0.60; 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1; 0 0 0.58 1; 0 0 1 1" />
+      </path>
+    </g>
+
+  </g>
+</svg>

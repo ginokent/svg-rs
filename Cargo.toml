@@ -1,0 +1,18 @@
+[package]
+name = "svg"
+version = "0.0.1"
+edition = "2021"
+
+[[bin]]
+name = "svg-cli"
+path = "src/bin/cli/main.rs"
+required-features = ["cli"]
+
+[features]
+default = []
+cli = ["dep:tiny-skia", "dep:png", "dep:clap"]
+
+[dependencies]
+tiny-skia = { version = "0.11", optional = true }
+png = { version = "0.17", optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
