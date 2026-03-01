@@ -70,7 +70,11 @@ fn build_stroke_outline(
     }
 
     // 各セグメントの法線ベクトルを計算
-    let mut normals: Vec<(f32, f32)> = Vec::with_capacity(n - 1);
+    //
+    // 開いたパス: n-1 本のセグメント → n-1 個の法線
+    // 閉じたパス: n 本のセグメント (閉じるセグメント含む) → n 個の法線
+    let normal_count = if is_closed { n } else { n - 1 };
+    let mut normals: Vec<(f32, f32)> = Vec::with_capacity(normal_count);
     for i in 0..n - 1 {
         let dx = points[i + 1].0 - points[i].0;
         let dy = points[i + 1].1 - points[i].1;
@@ -80,6 +84,17 @@ fn build_stroke_outline(
         } else {
             // 同一点のセグメントには前の法線を使う
             normals.push(if let Some(&prev) = normals.last() { prev } else { (0.0, 1.0) });
+        }
+    }
+    // 閉じたパスの場合、閉じるセグメント (最後の頂点→最初の頂点) の法線も計算
+    if is_closed {
+        let dx = points[0].0 - points[n - 1].0;
+        let dy = points[0].1 - points[n - 1].1;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len > 0.0 {
+            normals.push((-dy / len, dx / len));
+        } else {
+            normals.push(*normals.last().unwrap_or(&(0.0, 1.0)));
         }
     }
 
@@ -92,34 +107,38 @@ fn build_stroke_outline(
     // 内形 (左側) の点列
     let mut inner: Vec<(f32, f32)> = Vec::with_capacity(n * 2);
 
-    // 最初のセグメントの始点
-    let n0 = normals[0];
-    outer.push((
-        points[0].0 + n0.0 * half_width,
-        points[0].1 + n0.1 * half_width,
-    ));
-    inner.push((
-        points[0].0 - n0.0 * half_width,
-        points[0].1 - n0.1 * half_width,
-    ));
-
-    // 各屈折点を処理
-    for i in 1..n - 1 {
-        let n_prev = normals[i - 1];
-        let n_next = normals[i];
-        let p = points[i];
-
-        // Join 処理: 外形と内形の屈折点を追加
-        add_join_points(p, n_prev, n_next, half_width, join, &mut outer, &mut inner);
-    }
-
     if is_closed {
-        // 閉じたパス: 最後のセグメントと最初のセグメントの接合
-        let n_prev = *normals.last().unwrap();
-        let n_next = normals[0];
-        let p = points[0];
-        add_join_points(p, n_prev, n_next, half_width, join, &mut outer, &mut inner);
+        // 閉じたパス: 最初の頂点も join 処理で追加する (単純オフセットではなく)
+        // v0 の join: 閉じるセグメント (v_{n-1}→v0) と最初のセグメント (v0→v1) の接合
+        add_join_points(points[0], normals[n - 1], normals[0], half_width, join, &mut outer, &mut inner);
+
+        // 内部頂点 v1..v_{n-1} の join 処理 (v_{n-1} も含む — 閉じるセグメントとの接合)
+        for i in 1..n {
+            let n_prev = normals[i - 1];
+            let n_next = normals[i];
+            let p = points[i];
+            add_join_points(p, n_prev, n_next, half_width, join, &mut outer, &mut inner);
+        }
     } else {
+        // 開いたパス: 最初のセグメントの始点
+        let n0 = normals[0];
+        outer.push((
+            points[0].0 + n0.0 * half_width,
+            points[0].1 + n0.1 * half_width,
+        ));
+        inner.push((
+            points[0].0 - n0.0 * half_width,
+            points[0].1 - n0.1 * half_width,
+        ));
+
+        // 各屈折点を処理
+        for i in 1..n - 1 {
+            let n_prev = normals[i - 1];
+            let n_next = normals[i];
+            let p = points[i];
+            add_join_points(p, n_prev, n_next, half_width, join, &mut outer, &mut inner);
+        }
+
         // 開いたパスの終点
         let n_last = *normals.last().unwrap();
         let last_pt = points[n - 1];
@@ -186,6 +205,20 @@ fn build_stroke_outline(
 }
 
 /// 屈折点における外形と内形の点を追加する。
+///
+/// Bevel/Round join では凸側と凹側で処理を分ける:
+/// - **凸側** (開く側): 指定された join スタイルを適用 (2 点)
+/// - **凹側** (閉じる側): 常に miter 交点 (1 点) を使用し自己交差を防ぐ
+///
+/// ```text
+///   outer(+normal 方向)
+///     ●───────●  ← 凸側: Bevel/Round (2 点で面取り)
+///    ╱         ╲
+///   P ─────────→ 次セグメント
+///    ╲         ╱
+///     ●           ← 凹側: Miter (1 点で交差回避)
+///   inner(-normal 方向)
+/// ```
 fn add_join_points(
     p: (f32, f32),
     n_prev: (f32, f32),
@@ -196,12 +229,43 @@ fn add_join_points(
     inner: &mut Vec<(f32, f32)>,
 ) {
     match join {
-        LineJoin::Bevel => {
-            // 前セグメントの終点 → 次セグメントの始点 を直線で面取り
-            outer.push((p.0 + n_prev.0 * half_width, p.1 + n_prev.1 * half_width));
-            outer.push((p.0 + n_next.0 * half_width, p.1 + n_next.1 * half_width));
-            inner.push((p.0 - n_prev.0 * half_width, p.1 - n_prev.1 * half_width));
-            inner.push((p.0 - n_next.0 * half_width, p.1 - n_next.1 * half_width));
+        LineJoin::Bevel | LineJoin::Round => {
+            // 凸側/凹側の判定: 法線ベクトルの外積
+            //   cross > 0 → outer 側が凸、inner 側が凹
+            //   cross < 0 → outer 側が凹、inner 側が凸
+            //   cross ≈ 0 → ほぼ直線
+            let cross = n_prev.0 * n_next.1 - n_prev.1 * n_next.0;
+
+            if cross > 1e-6 {
+                // outer が凸 → join スタイル適用 (2 点), inner が凹 → miter (1 点)
+                outer.push((p.0 + n_prev.0 * half_width, p.1 + n_prev.1 * half_width));
+                outer.push((p.0 + n_next.0 * half_width, p.1 + n_next.1 * half_width));
+                // 凹側: miter 交点を求める。miter_limit 超過時は屈折点 p 自体をフォールバック
+                let inner_pt = miter_point(
+                    p,
+                    (-n_prev.0, -n_prev.1),
+                    (-n_next.0, -n_next.1),
+                    half_width,
+                    f32::MAX, // 凹側は miter_limit を無制限にする (交点は元の点に近い)
+                ).unwrap_or(p);
+                inner.push(inner_pt);
+            } else if cross < -1e-6 {
+                // outer が凹 → miter (1 点), inner が凸 → join スタイル適用 (2 点)
+                let outer_pt = miter_point(
+                    p,
+                    n_prev,
+                    n_next,
+                    half_width,
+                    f32::MAX,
+                ).unwrap_or(p);
+                outer.push(outer_pt);
+                inner.push((p.0 - n_prev.0 * half_width, p.1 - n_prev.1 * half_width));
+                inner.push((p.0 - n_next.0 * half_width, p.1 - n_next.1 * half_width));
+            } else {
+                // ほぼ直線 → 各側 1 点ずつ (n_next のオフセット)
+                outer.push((p.0 + n_next.0 * half_width, p.1 + n_next.1 * half_width));
+                inner.push((p.0 - n_next.0 * half_width, p.1 - n_next.1 * half_width));
+            }
         }
         LineJoin::Miter => {
             // Miter: 法線の延長線の交点を求める
@@ -219,14 +283,6 @@ fn add_join_points(
                 inner.push((p.0 - n_prev.0 * half_width, p.1 - n_prev.1 * half_width));
                 inner.push((p.0 - n_next.0 * half_width, p.1 - n_next.1 * half_width));
             }
-        }
-        LineJoin::Round => {
-            // Round: Bevel と同じ点を追加 (CubicTo での近似は省略し LineTo で代用)
-            // 厳密には CubicTo で円弧を近似すべきだが、ここでは Bevel で代替
-            outer.push((p.0 + n_prev.0 * half_width, p.1 + n_prev.1 * half_width));
-            outer.push((p.0 + n_next.0 * half_width, p.1 + n_next.1 * half_width));
-            inner.push((p.0 - n_prev.0 * half_width, p.1 - n_prev.1 * half_width));
-            inner.push((p.0 - n_next.0 * half_width, p.1 - n_next.1 * half_width));
         }
     }
 }
