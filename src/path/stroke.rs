@@ -490,7 +490,7 @@ mod tests {
 
     fn make_stroke(width: f32) -> StrokeStyle {
         StrokeStyle {
-            color: Color { r: 0, g: 0, b: 0, a: 255 },
+            paint: Paint::Color(Color { r: 0, g: 0, b: 0, a: 255 }),
             width,
             cap: LineCap::Butt,
             join: LineJoin::Miter,

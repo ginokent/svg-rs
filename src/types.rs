@@ -26,6 +26,8 @@ pub struct SvgGroup {
     pub id: Option<String>,
     pub transform: Affine2D,
     pub opacity: f32,
+    pub visibility: bool,
+    pub clip_path: Option<Vec<PathSegment>>,
     pub children: Vec<SvgNode>,
 }
 
@@ -42,18 +44,29 @@ pub struct SvgPath {
     pub fill: Option<FillStyle>,
     pub stroke: Option<StrokeStyle>,
     pub opacity: f32,
+    pub visibility: bool,
+    pub clip_path: Option<Vec<PathSegment>>,
+}
+
+/// 塗りの種類。色またはグラデーション参照。
+#[derive(Debug, Clone, PartialEq)]
+pub enum Paint {
+    Color(Color),
+    LinearGradient(LinearGradient),
+    RadialGradient(RadialGradient),
+    None,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FillStyle {
-    pub color: Color,
+    pub paint: Paint,
     pub rule: FillRule,
     pub opacity: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StrokeStyle {
-    pub color: Color,
+    pub paint: Paint,
     pub width: f32,
     pub cap: LineCap,
     pub join: LineJoin,
@@ -93,6 +106,55 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
+}
+
+// ============================================
+// グラデーション
+// ============================================
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LinearGradient {
+    pub x1: f32,
+    pub y1: f32,
+    pub x2: f32,
+    pub y2: f32,
+    pub stops: Vec<GradientStop>,
+    pub spread: SpreadMethod,
+    pub transform: Affine2D,
+    pub units: GradientUnits,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RadialGradient {
+    pub cx: f32,
+    pub cy: f32,
+    pub r: f32,
+    pub fx: f32,
+    pub fy: f32,
+    pub stops: Vec<GradientStop>,
+    pub spread: SpreadMethod,
+    pub transform: Affine2D,
+    pub units: GradientUnits,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GradientStop {
+    pub offset: f32, // 0.0-1.0
+    pub color: Color,
+    pub opacity: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpreadMethod {
+    Pad,
+    Reflect,
+    Repeat,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GradientUnits {
+    UserSpaceOnUse,
+    ObjectBoundingBox,
 }
 
 // ============================================
