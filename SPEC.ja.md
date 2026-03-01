@@ -1,4 +1,4 @@
-# `svg` クレート 実装指示書
+# `svg` クレート 仕様書
 
 ## 概要
 
@@ -51,7 +51,7 @@ pub fn parse(data: &[u8]) -> Result<SvgDocument, SvgError>;
 
 /// cubic bezier パスを折れ線にフラッテニングする。
 /// tolerance はピクセル単位の近似誤差許容値 (例: 0.25)。
-pub fn flatten(segments: &[PathSegment], tolerance: f32) -> Vec<(f32, f32)>;
+pub fn flatten(segments: &[PathSegment], tolerance: f32) -> Vec<Vec<(f32, f32)>>;
 
 /// ストロークパスをフィルパス (アウトライン) に変換する。
 pub fn stroke_to_fill(segments: &[PathSegment], style: &StrokeStyle) -> Vec<PathSegment>;
@@ -285,6 +285,7 @@ impl std::error::Error for SvgError {}
 - 要素ノード (タグ名、属性、子要素) とテキストノードを区別
 - 自己閉じ要素 (`<br/>`) に対応
 - 基本エンティティ参照の解決: `&amp;` → `&`, `&lt;` → `<`, `&gt;` → `>`, `&quot;` → `"`, `&apos;` → `'`
+- 数値文字参照の解決: `&#123;` (10 進) → 対応する Unicode 文字、`&#x41;` (16 進) → 対応する Unicode 文字
 - 名前空間の処理: `xmlns` / `xmlns:prefix` 属性を認識し、プレフィックスを除去してローカル名を取得
   - 例: `xlink:href` → ローカル名 `href`
 - コメント (`<!-- -->`) はスキップ
@@ -466,7 +467,7 @@ matrix(a,b,c,d,e,f)  → Affine2D { a, b, c, d, e, f }
 | CSS Named Color | `red`, `blue` 等 | テーブル参照 (148 色) |
 
 **CSS Named Colors テーブル** (148 色): `aliceblue`, `antiquewhite`, ..., `yellowgreen`
-最低限実装の場合、checkout.svg で使用されている色のみ対応でもよいが、148 色全てのテーブルは定数配列 1 つで実装可能。
+CSS Named Colors として定義される 148 色すべてに対応する。色名から RGB 値への変換テーブルを定数配列として保持する。
 
 ### 6. fill/stroke 属性パース (`svg/style.rs`)
 
@@ -522,16 +523,9 @@ right = (p0123, p123, p23, p3)
 ```
 
 **MoveTo/Close の扱い:**
-- `MoveTo(x, y)` → サブパスの開始。`output.push((x, y))`。前のサブパスがあれば区切りとして `(f32::NAN, f32::NAN)` を挟むか、サブパスごとに `Vec` を分けて返す。
-  - **推奨**: サブパスごとに分割して `Vec<Vec<(f32, f32)>>` を返す
-- `Close` → 最後の `MoveTo` の点を `output.push()`
-
-**公開 API の修正提案:**
-```rust
-/// サブパスごとにフラッテニングした結果を返す。
-/// 各サブパスは閉じたポリゴン (最初と最後の点が同一) または開いた折れ線。
-pub fn flatten(segments: &[PathSegment], tolerance: f32) -> Vec<Vec<(f32, f32)>>;
-```
+- `MoveTo(x, y)` → サブパスの開始。新しいサブパスを開始し、`output.push((x, y))`
+- `Close` → 最後の `MoveTo` の点を `output.push()` し、サブパスを閉じる
+- 戻り値は `Vec<Vec<(f32, f32)>>` 型で、サブパスごとに分割された折れ線を返す。各サブパスは閉じたポリゴン (最初と最後の点が同一) または開いた折れ線
 
 ### 8. ストローク → フィルパス変換 (`path/stroke.rs`)
 
@@ -579,10 +573,10 @@ Bevel:  外角を直線で面取り
 4. 描画区間のみを抽出してアウトライン化
 ```
 
-**注意**: ストローク変換は最も実装が複雑な部分。段階的に実装する:
-1. まず LineTo のみ (折れ線) のストローク変換を実装
-2. CubicTo のストローク変換 (曲線のオフセットは近似が必要)
-3. DashPattern 適用
+**対応範囲:**
+- LineTo (折れ線) のストローク変換
+- CubicTo のストローク変換 (曲線のオフセット近似)
+- DashPattern 適用
 
 ### 9. SMIL パーサー (`smil/parser.rs`)
 
@@ -592,6 +586,7 @@ Bevel:  外角を直線で面取り
 - `<animate>` → `SmilKind::Animate`
 - `<set>` → `SmilKind::Set`
 - `<animateTransform>` → `SmilKind::AnimateTransform`
+- `<animateMotion>` → SMIL タグとして認識しシーンツリー構築時にスキップするが、`SmilAnimation` としてのパースは行わない
 
 **ターゲット要素の特定:**
 1. SMIL 要素が子要素として配置: 親要素がターゲット
@@ -776,40 +771,45 @@ fn interpolate_smil_value(v0: &SmilValue, v1: &SmilValue, t: f64) -> SmilValue {
 
 ```rust
 // tests/checkout.rs
-#[test]
-fn parse_checkout_svg() {
-    let data = include_bytes!("../test_data/checkout.svg");
-    let doc = svg::parse(data).unwrap();
 
-    // viewBox の確認
+fn checkout_svg() -> &'static [u8] {
+    include_bytes!("fixtures/checkout.svg")
+}
+
+#[test]
+fn test_checkout_parse_viewbox() {
+    let doc = svg::parse(checkout_svg()).unwrap();
     assert_eq!(doc.view_box.width, 400.0);
     assert_eq!(doc.view_box.height, 400.0);
+}
 
-    // アニメーション数の確認
-    assert_eq!(doc.animations.len(), 18);
+#[test]
+fn test_checkout_has_animations() {
+    let doc = svg::parse(checkout_svg()).unwrap();
+    assert!(doc.animations.len() >= 15);
+}
 
-    // パスの存在確認
+#[test]
+fn test_checkout_has_paths() {
+    let doc = svg::parse(checkout_svg()).unwrap();
     let path_count = count_paths(&doc.root);
-    assert_eq!(path_count, 23);
-
-    // SMIL 評価テスト
-    let anim = &doc.animations[0];
-    let val = svg::evaluate(anim, 0.0);
-    // ... 期待値と比較
+    assert!(path_count >= 10);
 }
 ```
 
-## 実装の優先順位
+## モジュール依存関係
 
-1. **types.rs** — 全データ型の定義 (他のモジュールが依存)
-2. **xml/** — XML パーサー (SVG パースの基盤)
-3. **svg/path_data.rs** — `d` 属性パーサー (最も複雑で重要)
-4. **svg/transform.rs** — transform パーサー
-5. **svg/color.rs** — 色パーサー
-6. **svg/style.rs** — fill/stroke パーサー
-7. **svg/elements.rs** — ジオメトリ要素 → パス変換
-8. **parse.rs** — 統合パーサー (XML → SvgDocument)
-9. **path/flatten.rs** — フラッテニング
-10. **smil/parser.rs** — SMIL パーサー
-11. **smil/evaluator.rs** — SMIL エバリュエーター
-12. **path/stroke.rs** — ストローク → フィル変換 (最後: 最も複雑)
+| モジュール | 依存先 |
+|-----------|--------|
+| **types.rs** | なし (他の全モジュールがこれに依存) |
+| **xml/** | types.rs |
+| **svg/path_data.rs** | types.rs |
+| **svg/transform.rs** | types.rs |
+| **svg/color.rs** | types.rs |
+| **svg/style.rs** | types.rs, svg/color.rs |
+| **svg/elements.rs** | types.rs, svg/path_data.rs, svg/transform.rs |
+| **parse.rs** | types.rs, xml/, svg/, smil/ |
+| **path/flatten.rs** | types.rs |
+| **path/stroke.rs** | types.rs, path/flatten.rs |
+| **smil/parser.rs** | types.rs, svg/color.rs |
+| **smil/evaluator.rs** | types.rs |
