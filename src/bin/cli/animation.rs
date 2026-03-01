@@ -89,7 +89,7 @@ impl AnimationState {
     }
 
     /// 要素の fill カラーを解決する。
-    pub fn resolve_fill<'a>(&self, id: Option<&str>, base: &'a FillStyle) -> FillStyle {
+    pub fn resolve_fill(&self, id: Option<&str>, base: &FillStyle) -> FillStyle {
         let id = match id {
             Some(id) => id,
             None => return base.clone(),
@@ -101,7 +101,7 @@ impl AnimationState {
                 let mut result = base.clone();
                 for anim in anims.iter().rev() {
                     if let SmilValue::Color(c) = &anim.value {
-                        result.color = *c;
+                        result.paint = svg::Paint::Color(*c);
                         return result;
                     }
                 }
@@ -112,7 +112,7 @@ impl AnimationState {
     }
 
     /// 要素の stroke を解決する。
-    pub fn resolve_stroke<'a>(&self, id: Option<&str>, base: &'a StrokeStyle) -> StrokeStyle {
+    pub fn resolve_stroke(&self, id: Option<&str>, base: &StrokeStyle) -> StrokeStyle {
         let id = match id {
             Some(id) => id,
             None => return base.clone(),
@@ -123,7 +123,7 @@ impl AnimationState {
         if let Some(anims) = self.values.get(&key) {
             for anim in anims.iter().rev() {
                 if let SmilValue::Color(c) = &anim.value {
-                    result.color = *c;
+                    result.paint = svg::Paint::Color(*c);
                     break;
                 }
             }
